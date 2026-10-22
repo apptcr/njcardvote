@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Service Performance Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#F4F6F9; --surface:#FFFFFF; --line:#DDE3EB; --text:#1B2733; --muted:#66758A;
+  --primary:#1F4E79; --primary-soft:#E8F0F8; --ok:#1E7B4F; --ok-soft:#E6F4EC;
+  --accent:#B7791F; --accent-soft:#FBF3E3;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,'Noto Sans Thai','Segoe UI',Tahoma,sans-serif;font-size:14px;line-height:1.5;min-height:100vh;display:flex;flex-direction:column}
+header{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);z-index:20}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px;width:100%}
+.bar{height:60px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:36px;height:36px;border-radius:8px;background:var(--primary);color:#fff;display:grid;place-items:center}
+.brand h1{margin:0;font-size:16px;font-weight:700;line-height:1.2}
+.brand small{color:var(--muted);font-size:12px}
+.tools{display:flex;align-items:center;gap:10px}
+.pill{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:500;color:var(--ok);background:var(--ok-soft)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);position:relative}
+.dot.ping::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--ok);animation:ping 1s ease-out}
+@keyframes ping{to{transform:scale(3);opacity:0}}
+.icon-btn{border:1px solid var(--line);background:var(--surface);border-radius:8px;width:34px;height:34px;display:grid;place-items:center;cursor:pointer;color:var(--muted)}
+.icon-btn:hover{border-color:var(--primary);color:var(--primary)}
+.spin svg{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+main{padding:24px 20px 8px;display:grid;gap:20px;flex:1}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:22px;box-shadow:0 1px 2px rgba(20,40,70,.04)}
+.hero{display:flex;flex-wrap:wrap;gap:24px;justify-content:space-between;align-items:center;border-left:4px solid var(--primary)}
+.tags{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px;font-size:12px;color:var(--muted)}
+.tag{padding:2px 10px;border-radius:999px;font-weight:600;font-size:11px;background:var(--primary-soft);color:var(--primary)}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.hero h2{margin:0 0 6px;font-size:26px;font-weight:700}
+.hero p{margin:0;color:var(--muted);max-width:520px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;min-width:min(100%,360px)}
+.stat{border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center;background:#FAFBFD}
+.stat span{display:block;font-size:12px;color:var(--muted)}
+.stat b{display:block;font-size:26px;margin-top:2px;color:var(--primary)}
+.stat b.sm{font-size:17px;padding-top:6px;color:var(--text)}
+.stat em{font-style:normal;font-size:11px;color:var(--ok)}
+.links{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.link{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-decoration:none;color:inherit;transition:.15s}
+.link:hover{border-color:var(--primary);box-shadow:0 2px 8px rgba(31,78,121,.1)}
+.link i{width:38px;height:38px;border-radius:8px;display:grid;place-items:center;background:var(--primary-soft);color:var(--primary);font-style:normal;font-weight:700}
+.link b{display:block;font-size:14px}.link small{color:var(--muted);font-size:12px}
+.cols{display:grid;grid-template-columns:2fr 1fr;gap:20px}
+@media(max-width:900px){.cols{grid-template-columns:1fr}.stats{width:100%}}
+.head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.head h3{margin:0;font-size:16px}.head p{margin:2px 0 0;font-size:12px;color:var(--muted)}
+.seg{display:flex;gap:4px;background:var(--bg);padding:3px;border-radius:8px;border:1px solid var(--line)}
+.seg button,.tabs button{font:inherit;font-size:12px;cursor:pointer;border:0;border-radius:6px;padding:5px 12px;background:transparent;color:var(--muted);font-weight:500}
+.seg button.on{background:var(--surface);color:var(--primary);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+.chart{height:270px;padding-top:16px;position:relative}
+.info{list-style:none;margin:14px 0 0;padding:0}
+.info li{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+.info span{color:var(--muted)}.info b{font-weight:600;text-align:right}
+.note{margin-top:16px;background:var(--accent-soft);border:1px solid #EBD9B0;border-radius:10px;padding:12px;font-size:12px}
+.note b{display:block;color:var(--accent);margin-bottom:2px}
+.cta{width:100%;margin-top:16px;border:0;border-radius:8px;background:var(--primary);color:#fff;font:inherit;font-weight:600;padding:10px;cursor:pointer}
+.cta:hover{background:#173B5C}
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.tabs button{border:1px solid var(--line);background:var(--surface)}
+.tabs button.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;padding-top:18px}
+.item{border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;align-items:center;text-align:center;cursor:pointer;background:#FAFBFD;transition:.15s}
+.item:hover{transform:translateY(-3px);border-color:var(--primary);box-shadow:0 6px 14px rgba(31,78,121,.12)}
+.thumb{width:100%;aspect-ratio:2/3;border-radius:8px;position:relative;display:grid;place-items:center;font-weight:700;font-size:22px;color:var(--primary);background:linear-gradient(180deg,var(--primary-soft),#fff);border:1px solid var(--line);margin-bottom:10px}
+.thumb s{text-decoration:none;position:absolute;top:6px;right:6px;font-size:10px;background:var(--primary);color:#fff;padding:1px 6px;border-radius:4px}
+.item b{font-size:13px;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.item small{font-size:11px;color:var(--muted)}
+.vote{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding-top:18px}
+@media(max-width:700px){.vote{grid-template-columns:1fr}}
+.vstat{display:inline-block;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:600;background:var(--ok-soft);color:var(--ok)}
+.vstat.wait{background:var(--accent-soft);color:var(--accent)}
+.timer{font-size:34px;font-weight:700;color:var(--primary);margin:10px 0 8px;font-variant-numeric:tabular-nums}
+.prog{height:8px;background:var(--bg);border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.prog div{height:100%;width:0;background:var(--primary);transition:width 1s linear}
+.row{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-top:12px}
+.row label{font-size:12px;color:var(--muted);display:grid;gap:4px}
+.row input{font:inherit;width:84px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--text)}
+.btn{font:inherit;font-weight:600;border-radius:8px;padding:9px 14px;cursor:pointer;border:1px solid var(--primary);background:var(--primary);color:#fff;text-decoration:none;display:inline-block;text-align:center}
+.btn.ghost{background:#fff;color:var(--primary)}
+.btn:hover{opacity:.9}
+.hist{list-style:none;margin:10px 0 0;padding:0;font-size:12px;color:var(--muted)}
+.hist li{padding:6px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
+footer{border-top:1px solid var(--line);background:var(--surface);margin-top:24px;padding:16px 20px;text-align:center;font-size:12px;color:var(--muted)}
+#toast{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--ok);padding:12px 16px;border-radius:8px;box-shadow:0 8px 24px rgba(20,40,70,.15);font-size:13px;font-weight:500;transform:translateY(80px);opacity:0;transition:.3s;z-index:30}
+#toast.show{transform:none;opacity:1}
+</style>
+</head>
+<body>
+<header>
+ <div class="wrap bar">
+  <div class="brand">
+   <div class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div>
+   <div><h1>Service Monitor</h1><small>Performance &amp; Engagement Report</small></div>
+  </div>
+  <div class="tools">
+   <div class="pill"><span class="dot" id="livePing"></span><span>Auto-refresh</span></div>
+   <button class="icon-btn" id="refreshBtn" onclick="manualRefresh()" aria-label="รีเฟรช"><span id="refreshIcon" style="display:grid"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5"/></svg></span></button>
+  </div>
+ </div>
+</header>
+
+<main class="wrap">
+ <section class="card hero">
+  <div>
+   <div class="tags"><span class="tag">Category: General</span><span class="tag ok">ONLINE</span><span>อัปเดตล่าสุด: <span id="lastUpdatedTime">กำลังโหลด...</span></span></div>
+   <h2>Digital Collection Platform</h2>
+   <p>แพลตฟอร์มบริหารรายการสะสมออนไลน์ รองรับการสะสม การอัปเกรดรายการ ตลาดซื้อขายแลกเปลี่ยน และชุมชนผู้ใช้งานบน PlayServer</p>
+  </div>
+  <div class="stats">
+   <div class="stat"><span>คะแนนรวม (Total)</span><b id="voteCounter">–</b><em id="voteNote">กำลังโหลด...</em></div>
+   <div class="stat"><span>อันดับหมวดหมู่</span><b id="rankValue">–</b><em style="color:var(--muted)">General</em></div>
+   <div class="stat"><span>ประเภท</span><b class="sm">Web-Based</b><em style="color:var(--muted)">Platform</em></div>
+  </div>
+ </section>
+
+ <section class="links">
+  <a class="link" href="https://playserver.in.th/index.php/Vote/prokud/Pokemon-Card-Simulator-110140" target="_blank" rel="noopener noreferrer"><i>★</i><div><b>ให้คะแนนบน PlayServer</b><small>ช่วยเพิ่มอันดับบริการ</small></div></a>
+  <a class="link" href="#" onclick="showNotice('กำลังเชื่อมต่อไปยังช่องทางชุมชน...');return false;"><i>@</i><div><b>Community Channel</b><small>พูดคุย &amp; แลกเปลี่ยนรายการ</small></div></a>
+  <a class="link" href="#" onclick="showNotice('เปิดพอร์ทัลใช้งาน...');return false;"><i>▶</i><div><b>เข้าสู่ระบบใช้งาน</b><small>เปิดชุดรายการ / จัดชุด</small></div></a>
+ </section>
+
+ <section class="cols">
+  <div class="card">
+   <div class="head">
+    <div><h3>แนวโน้มคะแนน (Trend)</h3><p>สถิติคะแนนย้อนหลังรายวัน/รายชั่วโมง</p></div>
+    <div class="seg">
+     <button id="btn24h" class="on" onclick="setChartRange('24h')">24 ชั่วโมง</button>
+     <button id="btn7d" onclick="setChartRange('7d')">7 วัน</button>
+     <button id="btn30d" onclick="setChartRange('30d')">30 วัน</button>
+    </div>
+   </div>
+   <div class="chart"><canvas id="voteChart"></canvas></div>
+  </div>
+
+  <div class="card">
+   <h3 style="margin:0;font-size:16px">รายละเอียดบริการ</h3>
+   <ul class="info">
+    <li><span>ผู้ดูแลระบบ</span><b>CardSim Dev Team</b></li>
+    <li><span>สถานะการเปิดบริการ</span><b style="color:var(--ok)">เปิดทดสอบ (Beta)</b></li>
+    <li><span>ระบบแลกเปลี่ยน</span><b>เปิดใช้งาน (Marketplace)</b></li>
+    <li><span>อัตราการได้รับรายการ Tier S</span><b style="color:var(--accent)">0.5% (Event x2)</b></li>
+   </ul>
+   <div class="note"><b>ประกาศจากผู้ดูแลระบบ</b>ระบบนี้สร้างขึ้นเพื่อทดสอบกลไกการสุ่มและประสบการณ์ผู้ใช้ สามารถเข้ามารับสิทธิ์ประจำวันได้ทุกวัน</div>
+   <button class="cta" onclick="showNotice('รับสิทธิ์ประจำวันเรียบร้อยแล้ว (+1)')">รับสิทธิ์ประจำวัน</button>
+   <button class="cta" id="voteBtn" style="background:var(--ok)" onclick="castVote()">ให้คะแนนบริการนี้</button>
+   <small style="display:block;margin-top:8px;color:var(--muted);font-size:11px;text-align:center">กดแล้วจะเปิดหน้า PlayServer เพื่อโหวตจริง เมื่อกลับมาหน้านี้ ตัวเลขจะอัปเดตเอง</small>
+  </div>
+ </section>
+
+ <section class="card">
+  <div class="head">
+   <div><h3>ตัวช่วยให้คะแนน (Rating Helper)</h3><p>จับเวลา Cooldown และบันทึกประวัติการให้คะแนนบน PlayServer</p></div>
+   <span class="vstat" id="vStat">พร้อมให้คะแนน</span>
+  </div>
+  <div class="vote">
+   <div>
+    <div style="font-size:12px;color:var(--muted)">เวลาที่เหลือก่อนให้คะแนนได้อีกครั้ง</div>
+    <div class="timer" id="vTimer">00:00:00</div>
+    <div class="prog"><div id="vProg"></div></div>
+    <div class="row">
+     <a class="btn" href="https://playserver.in.th/index.php/Vote/prokud/Pokemon-Card-Simulator-110140" target="_blank" rel="noopener noreferrer">เปิดหน้า PlayServer</a>
+     <button class="btn ghost" onclick="resetVote()">ล้างข้อมูล</button>
+    </div>
+   </div>
+   <div>
+    <div style="font-size:13px;font-weight:600">บันทึกหลังให้คะแนนแล้ว</div>
+    <div style="font-size:12px;color:var(--muted)">ใส่ Cooldown ที่ PlayServer แสดงในครั้งนั้น</div>
+    <div class="row">
+     <label>ชั่วโมง<input type="number" id="cdH" min="0" max="48" value="0"></label>
+     <label>นาที<input type="number" id="cdM" min="0" max="59" value="30"></label>
+     <button class="btn" onclick="logVote()">บันทึกว่าให้คะแนนแล้ว</button>
+    </div>
+    <ul class="hist" id="vHist"></ul>
+   </div>
+  </div>
+ </section>
+
+ <section class="card">
+  <div class="head">
+   <div><h3>ตัวอย่างรายการในระบบ (Catalog)</h3><p>รายการระดับพิเศษที่สามารถได้รับภายในแพลตฟอร์ม</p></div>
+   <div class="tabs">
+    <button id="tab-all" class="on" onclick="filterCards('all')">ทั้งหมด</button>
+    <button id="tab-sar" onclick="filterCards('sar')">Tier S</button>
+    <button id="tab-shiny" onclick="filterCards('shiny')">Tier V</button>
+    <button id="tab-ur" onclick="filterCards('ur')">Tier U</button>
+   </div>
+  </div>
+  <div class="grid" id="cardsGrid">
+   <div class="item card-item sar"><div class="thumb">A-01<s>S</s></div><b>รายการตัวอย่าง A-01</b><small>Tier S</small></div>
+   <div class="item card-item shiny"><div class="thumb">B-02<s>V</s></div><b>รายการตัวอย่าง B-02</b><small>Tier V</small></div>
+   <div class="item card-item ur"><div class="thumb">C-03<s>U</s></div><b>รายการตัวอย่าง C-03</b><small>Tier U</small></div>
+   <div class="item card-item sar"><div class="thumb">D-04<s>S</s></div><b>รายการตัวอย่าง D-04</b><small>Tier S</small></div>
+   <div class="item card-item shiny"><div class="thumb">E-05<s>V</s></div><b>รายการตัวอย่าง E-05</b><small>Tier V</small></div>
+   <div class="item card-item ur"><div class="thumb">F-06<s>U</s></div><b>รายการตัวอย่าง F-06</b><small>Tier U</small></div>
+  </div>
+ </section>
+</main>
+
+<footer>Service Monitor — ข้อมูลจัดทำจำลองเพื่อติดตามสถานะบริการบน PlayServer Thailand</footer>
+<div id="toast"><span id="toastMsg">ข้อความแจ้งเตือน</span></div>
+
+<script>
+const LIVE_API = 'https://www.apptcr-namjit.workers.dev/';
+const VOTE_URL = 'https://playserver.in.th/index.php/Vote/prokud/Pokemon-Card-Simulator-110140';
+let currentVoteCount = 14, chartInstance = null, liveVotes = null, chartRange = '24h';
+let hist = [];
+try{ hist = JSON.parse(localStorage.getItem('vh1')||'[]'); }catch(e){}
+
+function recordPoint(v){
+  const last = hist[hist.length-1], now = Date.now();
+  if(last && last.v===v && now-last.t < 1800000) return;
+  hist.push({t:now,v:v});
+  if(hist.length>600) hist = hist.slice(-600);
+  try{ localStorage.setItem('vh1',JSON.stringify(hist)); }catch(e){}
+}
+
+async function fetchLive(notify){
+  if(!LIVE_API) return;
+  try{
+    const r = await fetch(LIVE_API,{cache:'no-store'});
+    if(!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    if(typeof d.votes==='number' && !(d.votes===0 && liveVotes>0)){ liveVotes=d.votes; recordPoint(d.votes); syncCount(); renderChart(); }
+    if(d.rank!=null) document.getElementById('rankValue').innerText='#'+d.rank;
+    document.getElementById('voteNote').innerText='ข้อมูลจริงจาก PlayServer';
+    document.getElementById('lastUpdatedTime').innerText=new Date(d.fetchedAt).toLocaleTimeString('th-TH');
+    if(notify) showNotice('ดึงข้อมูลล่าสุดสำเร็จ');
+  }catch(e){
+    document.getElementById('voteNote').innerText='ดึงข้อมูลไม่สำเร็จ';
+    if(notify) showNotice('ดึงข้อมูลไม่สำเร็จ ใช้ค่าเดิมต่อไป');
+  }
+}
+
+function initChart(){
+  const ctx = document.getElementById('voteChart').getContext('2d');
+  const g = ctx.createLinearGradient(0,0,0,300);
+  g.addColorStop(0,'rgba(31,78,121,.22)'); g.addColorStop(1,'rgba(31,78,121,0)');
+  chartInstance = new Chart(ctx,{
+    type:'line',
+    data:{labels:[],datasets:[{label:'คะแนน',data:[],borderColor:'#1F4E79',borderWidth:2.5,backgroundColor:g,fill:true,tension:.3,pointBackgroundColor:'#fff',pointBorderColor:'#1F4E79',pointBorderWidth:2,pointRadius:4,pointHoverRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',titleColor:'#1F4E79',bodyColor:'#1B2733',borderColor:'#DDE3EB',borderWidth:1,padding:10,displayColors:false}},
+      scales:{x:{grid:{color:'#EEF1F5'},ticks:{color:'#66758A',font:{size:11}}},y:{grid:{color:'#EEF1F5'},ticks:{color:'#66758A',font:{size:11},precision:0}}}}
+  });
+  renderChart();
+}
+
+// กราฟนี้วาดจากค่าจริงที่เบราว์เซอร์นี้บันทึกไว้ทุกครั้งที่ดึงข้อมูล (ยิ่งเปิดบ่อย ยิ่งมีจุดมาก)
+function renderChart(){
+  if(!chartInstance) return;
+  const win = {'24h':864e5,'7d':6048e5,'30d':2592e6}[chartRange];
+  const pts = hist.filter(p=>Date.now()-p.t<=win);
+  const f = chartRange==='24h'
+    ? t=>new Date(t).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})
+    : t=>new Date(t).toLocaleDateString('th-TH',{day:'numeric',month:'short'})+' '+new Date(t).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+  chartInstance.data.labels = pts.map(p=>f(p.t));
+  chartInstance.data.datasets[0].data = pts.map(p=>p.v);
+  chartInstance.update();
+}
+
+function setChartRange(r){
+  chartRange = r;
+  ['24h','7d','30d'].forEach(k=>document.getElementById('btn'+k).classList.toggle('on',k===r));
+  renderChart();
+}
+
+function manualRefresh(){
+  const icon=document.getElementById('refreshIcon');
+  icon.classList.add('spin');
+  fetchLive(true).finally(()=>icon.classList.remove('spin'));
+}
+
+function castVote(){
+  const w=window.open(VOTE_URL,'psvote','width=400,height=600');
+  if(!w){ window.open(VOTE_URL,'_blank','noopener'); showNotice('เปิดหน้าโหวต PlayServer แล้ว โหวตเสร็จให้กลับมาหน้านี้'); return; }
+  showNotice('โหวตในหน้าต่างที่เปิดขึ้น เสร็จแล้วปิดหน้าต่างได้เลย');
+  const iv=setInterval(()=>{
+    if(w.closed){ clearInterval(iv); setTimeout(()=>fetchLive(true),1500); }
+  },800);
+}
+
+function filterCards(cat){
+  ['all','sar','shiny','ur'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('on',t===cat));
+  document.querySelectorAll('.card-item').forEach(c=>{
+    c.style.display=(cat==='all'||c.classList.contains(cat))?'flex':'none';
+  });
+}
+
+function showNotice(msg){
+  const t=document.getElementById('toast');
+  document.getElementById('toastMsg').innerText=msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+
+/* Rating helper: runs locally, you vote on PlayServer yourself */
+let vs={readyAt:0,startAt:0,log:[]};
+function saveVote(){try{localStorage.setItem('rh1',JSON.stringify(vs))}catch(e){}}
+function fmt(ms){const s=Math.max(0,Math.ceil(ms/1000));return [Math.floor(s/3600),Math.floor(s%3600/60),s%60].map(n=>String(n).padStart(2,'0')).join(':')}
+function syncCount(){
+  currentVoteCount=liveVotes!==null?liveVotes:14+vs.log.length;
+  document.getElementById('voteCounter').innerText=(LIVE_API&&liveVotes===null)?'–':currentVoteCount;
+}
+function renderHist(){
+  const el=document.getElementById('vHist');
+  el.innerHTML=vs.log.slice(-5).reverse().map(l=>'<li><span>'+new Date(l.t).toLocaleString('th-TH')+'</span><span>Cooldown '+fmt(l.cd*1000).slice(0,5)+' ชม.</span></li>').join('')||'<li>ยังไม่มีประวัติ</li>';
+}
+let wasWaiting=false;
+function tickVote(){
+  const left=vs.readyAt-Date.now(),st=document.getElementById('vStat');
+  document.getElementById('vTimer').innerText=fmt(left);
+  if(left>0){
+    st.textContent='อยู่ในช่วง Cooldown';st.className='vstat wait';wasWaiting=true;
+    const tot=vs.readyAt-vs.startAt;
+    document.getElementById('vProg').style.width=Math.min(100,(1-left/tot)*100)+'%';
+  }else{
+    st.textContent='พร้อมให้คะแนน';st.className='vstat';
+    document.getElementById('vProg').style.width='0';
+    if(wasWaiting){wasWaiting=false;showNotice('ครบเวลา Cooldown แล้ว สามารถให้คะแนนได้อีกครั้ง');try{if(window.Notification&&Notification.permission==='granted')new Notification('ครบเวลา Cooldown แล้ว')}catch(e){}}
+  }
+}
+function logVote(){
+  const h=+document.getElementById('cdH').value||0,m=+document.getElementById('cdM').value||0,cd=h*3600+m*60;
+  if(cd<=0){showNotice('กรุณาใส่ระยะเวลา Cooldown');return}
+  vs.startAt=Date.now();vs.readyAt=vs.startAt+cd*1000;
+  vs.log.push({t:vs.startAt,cd:cd});
+  saveVote();syncCount();renderHist();tickVote();
+  showNotice('บันทึกแล้ว เริ่มนับ Cooldown');
+  try{if(window.Notification&&Notification.permission==='default')Notification.requestPermission()}catch(e){}
+}
+function resetVote(){
+  vs={readyAt:0,startAt:0,log:[]};saveVote();syncCount();renderHist();tickVote();showNotice('ล้างข้อมูลแล้ว');
+}
+function initVote(){
+  try{const s=localStorage.getItem('rh1');if(s)vs=Object.assign(vs,JSON.parse(s))}catch(e){}
+  wasWaiting=false;syncCount();renderHist();tickVote();
+  setInterval(tickVote,1000);
+}
+
+window.onload=function(){
+  initChart();
+  initVote();
+  fetchLive(false);
+  if(LIVE_API){
+    setInterval(()=>fetchLive(false),300000);
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)fetchLive(false)});
+  }
+  setInterval(()=>{
+    const p=document.getElementById('livePing');
+    p.classList.add('ping');
+    setTimeout(()=>p.classList.remove('ping'),1000);
+  },15000);
+};
+</script>
+</body>
+</html>
