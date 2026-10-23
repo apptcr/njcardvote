@@ -48,6 +48,7 @@ main{padding:24px 20px 8px;display:grid;gap:20px;flex:1}
 .stat b{display:block;font-size:26px;margin-top:2px;color:var(--primary)}
 .stat b.sm{font-size:17px;padding-top:6px;color:var(--text)}
 .stat em{font-style:normal;font-size:11px;color:var(--ok)}
+.sicon{display:block;width:48px;height:48px;object-fit:cover;border-radius:10px;margin:6px auto 4px;border:1px solid var(--line);background:var(--primary-soft)}
 .links{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
 .link{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-decoration:none;color:inherit;transition:.15s}
 .link:hover{border-color:var(--primary);box-shadow:0 2px 8px rgba(31,78,121,.1)}
@@ -121,7 +122,13 @@ footer{border-top:1px solid var(--line);background:var(--surface);margin-top:24p
   <div class="stats">
    <div class="stat"><span>คะแนนรวม (Total)</span><b id="voteCounter">–</b><em id="voteNote">กำลังโหลด...</em></div>
    <div class="stat"><span>อันดับหมวดหมู่</span><b id="rankValue">–</b><em style="color:var(--muted)">General</em></div>
-   <div class="stat"><span>ประเภท</span><b class="sm">Web-Based</b><em style="color:var(--muted)">Platform</em></div>
+   <div class="stat">
+    <span>ไอคอนเซิร์ฟเวอร์</span>
+    <a href="https://playserver.in.th/index.php/Vote/prokud/Pokemon-Card-Simulator-110140" target="_blank" rel="noopener noreferrer">
+     <img id="serverIcon" class="sicon" src="" alt="ไอคอนเซิร์ฟเวอร์" referrerpolicy="no-referrer" onerror="iconFallback(this)">
+    </a>
+    <em style="color:var(--muted)">PlayServer</em>
+   </div>
   </div>
  </section>
 
@@ -214,9 +221,17 @@ footer{border-top:1px solid var(--line);background:var(--surface);margin-top:24p
 <script>
 const LIVE_API = 'https://www.apptcr-namjit.workers.dev/';
 const VOTE_URL = 'https://playserver.in.th/index.php/Vote/prokud/Pokemon-Card-Simulator-110140';
+const ICON_URL = 'https://playserver.in.th/user_image/server_icon/16944_480816554.gif';
 let currentVoteCount = 14, chartInstance = null, liveVotes = null, chartRange = '24h';
 let hist = [];
 try{ hist = JSON.parse(localStorage.getItem('vh1')||'[]'); }catch(e){}
+
+function iconFallback(img){
+  img.onerror = null;
+  img.src = 'data:image/svg+xml,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect width="48" height="48" rx="10" fill="#E8F0F8"/><text x="24" y="31" font-size="20" font-weight="700" text-anchor="middle" fill="#1F4E79" font-family="sans-serif">PS</text></svg>'
+  );
+}
 
 function recordPoint(v){
   const last = hist[hist.length-1], now = Date.now();
@@ -350,6 +365,7 @@ function initVote(){
 }
 
 window.onload=function(){
+  document.getElementById('serverIcon').src = ICON_URL;
   initChart();
   initVote();
   fetchLive(false);
