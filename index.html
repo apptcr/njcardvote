@@ -100,6 +100,17 @@ main{padding:24px 20px 8px;display:grid;gap:20px;flex:1}
 footer{border-top:1px solid var(--line);background:var(--surface);margin-top:24px;padding:16px 20px;text-align:center;font-size:12px;color:var(--muted)}
 #toast{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--ok);padding:12px 16px;border-radius:8px;box-shadow:0 8px 24px rgba(20,40,70,.15);font-size:13px;font-weight:500;transform:translateY(80px);opacity:0;transition:.3s;z-index:30}
 #toast.show{transform:none;opacity:1}
+
+/* Vote modal */
+#voteModal{position:fixed;inset:0;background:rgba(10,20,35,.6);display:grid;place-items:center;padding:16px;z-index:50}
+#voteModal[hidden]{display:none}
+.vbox{background:var(--surface);border:1px solid var(--line);border-radius:12px;width:100%;max-width:520px;height:min(720px,92vh);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 50px rgba(10,20,35,.35)}
+.vbox-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.vbox-head h3{margin:0;font-size:15px}
+.vbox-head button{font:inherit;font-size:12px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:8px;padding:5px 12px}
+#voteFrame{flex:1;width:100%;border:0;background:#fff}
+.vbox-foot{padding:10px 16px;border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+.vbox-foot a{color:var(--primary);font-weight:600}
 </style>
 </head>
 <body>
@@ -128,7 +139,7 @@ footer{border-top:1px solid var(--line);background:var(--surface);margin-top:24p
    <div class="stat"><span>อันดับหมวดหมู่</span><b id="rankValue">–</b><em style="color:var(--muted)">General</em><small id="rankDelta" class="delta"></small></div>
    <div class="stat">
     <span>ไอคอนเซิร์ฟเวอร์</span>
-    <a href="https://playserver.in.th/index.php/Vote/prokud/Pokemon-Card-Simulator-110140" target="_blank" rel="noopener noreferrer">
+    <a href="#" onclick="castVote();return false;">
      <img id="serverIcon" class="sicon" src="" alt="ไอคอนเซิร์ฟเวอร์" referrerpolicy="no-referrer" onerror="iconFallback(this)">
     </a>
     <em style="color:var(--muted)">PlayServer</em>
@@ -137,7 +148,7 @@ footer{border-top:1px solid var(--line);background:var(--surface);margin-top:24p
  </section>
 
  <section class="links">
-  <a class="link" href="https://playserver.in.th/index.php/Vote/prokud/Pokemon-Card-Simulator-110140" target="_blank" rel="noopener noreferrer"><i>★</i><div><b>ให้คะแนนบน PlayServer</b><small>ช่วยเพิ่มอันดับบริการ</small></div></a>
+  <a class="link" href="#" onclick="castVote();return false;"><i>★</i><div><b>ให้คะแนนบน PlayServer</b><small>ช่วยเพิ่มอันดับบริการ</small></div></a>
   <a class="link" href="#" onclick="showNotice('กำลังเชื่อมต่อไปยังช่องทางชุมชน...');return false;"><i>@</i><div><b>Community Channel</b><small>พูดคุย &amp; แลกเปลี่ยนรายการ</small></div></a>
   <a class="link" href="#" onclick="showNotice('เปิดพอร์ทัลใช้งาน...');return false;"><i>▶</i><div><b>เข้าสู่ระบบใช้งาน</b><small>เปิดชุดรายการ / จัดชุด</small></div></a>
  </section>
@@ -166,7 +177,7 @@ footer{border-top:1px solid var(--line);background:var(--surface);margin-top:24p
    <div class="note"><b>ประกาศจากผู้ดูแลระบบ</b>ระบบนี้สร้างขึ้นเพื่อทดสอบกลไกการสุ่มและประสบการณ์ผู้ใช้ สามารถเข้ามารับสิทธิ์ประจำวันได้ทุกวัน</div>
    <button class="cta" onclick="showNotice('รับสิทธิ์ประจำวันเรียบร้อยแล้ว (+1)')">รับสิทธิ์ประจำวัน</button>
    <button class="cta" id="voteBtn" style="background:var(--ok)" onclick="castVote()">ให้คะแนนบริการนี้</button>
-   <small style="display:block;margin-top:8px;color:var(--muted);font-size:11px;text-align:center">กดแล้วจะเปิดหน้า PlayServer เพื่อโหวตจริง เมื่อกลับมาหน้านี้ ตัวเลขจะอัปเดตเอง</small>
+   <small style="display:block;margin-top:8px;color:var(--muted);font-size:11px;text-align:center">กดแล้วจะเปิดหน้าโหวต PlayServer ขึ้นมาในหน้านี้ เมื่อปิดหน้าต่าง ตัวเลขจะอัปเดตเอง</small>
   </div>
  </section>
 
@@ -181,7 +192,7 @@ footer{border-top:1px solid var(--line);background:var(--surface);margin-top:24p
     <div class="timer" id="vTimer">00:00:00</div>
     <div class="prog"><div id="vProg"></div></div>
     <div class="row">
-     <a class="btn" href="https://playserver.in.th/index.php/Vote/prokud/Pokemon-Card-Simulator-110140" target="_blank" rel="noopener noreferrer">เปิดหน้า PlayServer</a>
+     <a class="btn" href="#" onclick="castVote();return false;">เปิดหน้า PlayServer</a>
      <button class="btn ghost" onclick="resetVote()">ล้างข้อมูล</button>
     </div>
    </div>
@@ -220,6 +231,19 @@ footer{border-top:1px solid var(--line);background:var(--surface);margin-top:24p
 </main>
 
 <footer>Service Monitor — ข้อมูลจัดทำจำลองเพื่อติดตามสถานะบริการบน PlayServer Thailand</footer>
+
+<div id="voteModal" hidden>
+ <div class="vbox" role="dialog" aria-modal="true" aria-labelledby="vbTitle">
+  <div class="vbox-head">
+   <h3 id="vbTitle">ให้คะแนนบริการนี้</h3>
+   <button type="button" onclick="closeVote()">ปิด</button>
+  </div>
+  <iframe id="voteFrame" title="หน้าโหวต PlayServer" referrerpolicy="no-referrer-when-downgrade"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+  <div class="vbox-foot">หน้านี้ไม่แสดง? <a href="#" onclick="return popVote()">เปิดเป็นหน้าต่างใหม่</a></div>
+ </div>
+</div>
+
 <div id="toast"><span id="toastMsg">ข้อความแจ้งเตือน</span></div>
 
 <script>
@@ -325,14 +349,25 @@ function manualRefresh(){
   fetchLive(true).finally(()=>icon.classList.remove('spin'));
 }
 
+/* Vote modal: PlayServer page embedded in an iframe, popup window as fallback */
 function castVote(){
-  const w=window.open(VOTE_URL,'psvote','width=400,height=600');
-  if(!w){ window.open(VOTE_URL,'_blank','noopener'); showNotice('เปิดหน้าโหวต PlayServer แล้ว โหวตเสร็จให้กลับมาหน้านี้'); return; }
-  showNotice('โหวตในหน้าต่างที่เปิดขึ้น เสร็จแล้วปิดหน้าต่างได้เลย');
-  const iv=setInterval(()=>{
-    if(w.closed){ clearInterval(iv); setTimeout(()=>fetchLive(true),1500); }
-  },800);
+  const f=document.getElementById('voteFrame');
+  if(!f.src||f.src==='about:blank') f.src=VOTE_URL;   // โหลดครั้งแรกตอนกดเท่านั้น
+  document.getElementById('voteModal').hidden=false;
 }
+function closeVote(){
+  document.getElementById('voteModal').hidden=true;
+  setTimeout(()=>fetchLive(true),1500);               // ปิดแล้วดึงคะแนนล่าสุด
+}
+function popVote(){
+  const w=window.open(VOTE_URL,'psvote','width=480,height=640');
+  if(!w){ window.open(VOTE_URL,'_blank','noopener'); return false; }
+  document.getElementById('voteModal').hidden=true;
+  const iv=setInterval(()=>{ if(w.closed){ clearInterval(iv); setTimeout(()=>fetchLive(true),1500); } },800);
+  return false;
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!document.getElementById('voteModal').hidden) closeVote(); });
+document.getElementById('voteModal').addEventListener('click',e=>{ if(e.target.id==='voteModal') closeVote(); });
 
 function filterCards(cat){
   ['all','sar','shiny','ur'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('on',t===cat));
