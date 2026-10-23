@@ -49,6 +49,10 @@ main{padding:24px 20px 8px;display:grid;gap:20px;flex:1}
 .stat b.sm{font-size:17px;padding-top:6px;color:var(--text)}
 .stat em{font-style:normal;font-size:11px;color:var(--ok)}
 .sicon{display:block;width:48px;height:48px;object-fit:cover;border-radius:10px;margin:6px auto 4px;border:1px solid var(--line);background:var(--primary-soft)}
+.delta{display:block;font-size:11px;font-weight:600;margin-top:2px;min-height:16px}
+.delta.up{color:var(--ok)}
+.delta.down{color:#B42318}
+.delta.flat{color:var(--muted)}
 .links{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
 .link{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;text-decoration:none;color:inherit;transition:.15s}
 .link:hover{border-color:var(--primary);box-shadow:0 2px 8px rgba(31,78,121,.1)}
@@ -120,8 +124,8 @@ footer{border-top:1px solid var(--line);background:var(--surface);margin-top:24p
    <p>แพลตฟอร์มบริหารรายการสะสมออนไลน์ รองรับการสะสม การอัปเกรดรายการ ตลาดซื้อขายแลกเปลี่ยน และชุมชนผู้ใช้งานบน PlayServer</p>
   </div>
   <div class="stats">
-   <div class="stat"><span>คะแนนรวม (Total)</span><b id="voteCounter">–</b><em id="voteNote">กำลังโหลด...</em></div>
-   <div class="stat"><span>อันดับหมวดหมู่</span><b id="rankValue">–</b><em style="color:var(--muted)">General</em></div>
+   <div class="stat"><span>คะแนนรวม (Total)</span><b id="voteCounter">–</b><em id="voteNote">กำลังโหลด...</em><small id="voteDelta" class="delta"></small></div>
+   <div class="stat"><span>อันดับหมวดหมู่</span><b id="rankValue">–</b><em style="color:var(--muted)">General</em><small id="rankDelta" class="delta"></small></div>
    <div class="stat">
     <span>ไอคอนเซิร์ฟเวอร์</span>
     <a href="https://playserver.in.th/index.php/Vote/prokud/Pokemon-Card-Simulator-110140" target="_blank" rel="noopener noreferrer">
@@ -222,7 +226,7 @@ footer{border-top:1px solid var(--line);background:var(--surface);margin-top:24p
 const LIVE_API = 'https://www.apptcr-namjit.workers.dev/';
 const VOTE_URL = 'https://playserver.in.th/index.php/Vote/prokud/Pokemon-Card-Simulator-110140';
 const ICON_URL = 'https://playserver.in.th/user_image/server_icon/16944_480816554.gif';
-let currentVoteCount = 14, chartInstance = null, liveVotes = null, chartRange = '24h';
+let currentVoteCount = 14, chartInstance = null, liveVotes = null, chartRange = '24h', serverPts = null;
 let hist = [];
 try{ hist = JSON.parse(localStorage.getItem('vh1')||'[]'); }catch(e){}
 
@@ -247,7 +251,8 @@ async function fetchLive(notify){
     const r = await fetch(LIVE_API,{cache:'no-store'});
     if(!r.ok) throw new Error(r.status);
     const d = await r.json();
-    if(typeof d.votes==='number' && !(d.votes===0 && liveVotes>0)){ liveVotes=d.votes; recordPoint(d.votes); syncCount(); renderChart(); }
+    if(typeof d.votes==='number' && !(d.votes===0 && liveVotes>0)){ liveVotes=d.votes; recordPoint(d.votes); syncCount(); loadHistory(); }
+    if(d.change){ renderDelta('voteDelta','votes',d.change.votes,d.change.hours); renderDelta('rankDelta','rank',d.change.rank,d.change.hours); }
     if(d.rank!=null) document.getElementById('rankValue').innerText='#'+d.rank;
     document.getElementById('voteNote').innerText='ข้อมูลจริงจาก PlayServer';
     document.getElementById('lastUpdatedTime').innerText=new Date(d.fetchedAt).toLocaleTimeString('th-TH');
@@ -272,23 +277,46 @@ function initChart(){
   renderChart();
 }
 
-// กราฟนี้วาดจากค่าจริงที่เบราว์เซอร์นี้บันทึกไว้ทุกครั้งที่ดึงข้อมูล (ยิ่งเปิดบ่อย ยิ่งมีจุดมาก)
+// กราฟใช้ประวัติจาก Worker เป็นหลัก ถ้าดึงไม่ได้จะใช้ค่าที่เบราว์เซอร์นี้บันทึกไว้แทน
 function renderChart(){
   if(!chartInstance) return;
   const win = {'24h':864e5,'7d':6048e5,'30d':2592e6}[chartRange];
-  const pts = hist.filter(p=>Date.now()-p.t<=win);
+  const pts = serverPts || hist.filter(p=>Date.now()-p.t<=win);
   const f = chartRange==='24h'
     ? t=>new Date(t).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})
     : t=>new Date(t).toLocaleDateString('th-TH',{day:'numeric',month:'short'})+' '+new Date(t).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
   chartInstance.data.labels = pts.map(p=>f(p.t));
   chartInstance.data.datasets[0].data = pts.map(p=>p.v);
+  chartInstance.data.datasets[0].pointRadius = pts.length>60?0:4;
   chartInstance.update();
+}
+
+async function loadHistory(){
+  if(!LIVE_API){ serverPts=null; renderChart(); return; }
+  try{
+    const r = await fetch(LIVE_API+'history?range='+chartRange,{cache:'no-store'});
+    if(!r.ok) throw new Error(r.status);
+    const d = await r.json();
+    serverPts = (Array.isArray(d.points) && d.points.length) ? d.points : null;
+  }catch(e){ serverPts=null; }
+  renderChart();
+}
+
+function renderDelta(id,kind,val,hours){
+  const el = document.getElementById(id);
+  if(val===null || val===undefined){ el.textContent=''; el.className='delta'; return; }
+  const span = hours>=23 ? 'เทียบ 24 ชม.' : 'ใน '+Math.max(1,Math.round(hours))+' ชม.';
+  let txt, cls;
+  if(val===0){ txt='ไม่เปลี่ยนแปลง '+span; cls='flat'; }
+  else if(kind==='votes'){ txt=(val>0?'▲ +':'▼ −')+Math.abs(val)+' คะแนน '+span; cls=val>0?'up':'down'; }
+  else { txt=val>0?'▲ ขึ้น '+val+' อันดับ '+span:'▼ ลง '+Math.abs(val)+' อันดับ '+span; cls=val>0?'up':'down'; }
+  el.textContent=txt; el.className='delta '+cls;
 }
 
 function setChartRange(r){
   chartRange = r;
   ['24h','7d','30d'].forEach(k=>document.getElementById('btn'+k).classList.toggle('on',k===r));
-  renderChart();
+  loadHistory();
 }
 
 function manualRefresh(){
@@ -367,6 +395,7 @@ function initVote(){
 window.onload=function(){
   document.getElementById('serverIcon').src = ICON_URL;
   initChart();
+  loadHistory();
   initVote();
   fetchLive(false);
   if(LIVE_API){
