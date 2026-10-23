@@ -177,7 +177,7 @@ footer{border-top:1px solid var(--line);background:var(--surface);margin-top:24p
    <div class="note"><b>ประกาศจากผู้ดูแลระบบ</b>ระบบนี้สร้างขึ้นเพื่อทดสอบกลไกการสุ่มและประสบการณ์ผู้ใช้ สามารถเข้ามารับสิทธิ์ประจำวันได้ทุกวัน</div>
    <button class="cta" onclick="showNotice('รับสิทธิ์ประจำวันเรียบร้อยแล้ว (+1)')">รับสิทธิ์ประจำวัน</button>
    <button class="cta" id="voteBtn" style="background:var(--ok)" onclick="castVote()">ให้คะแนนบริการนี้</button>
-   <small style="display:block;margin-top:8px;color:var(--muted);font-size:11px;text-align:center">กดแล้วจะเปิดหน้าโหวต PlayServer ขึ้นมาในหน้านี้ เมื่อปิดหน้าต่าง ตัวเลขจะอัปเดตเอง</small>
+   <small style="display:block;margin-top:8px;color:var(--muted);font-size:11px;text-align:center">กดแล้วจะเปิดหน้าต่างโหวตของ PlayServer เมื่อปิดหน้าต่าง ตัวเลขจะอัปเดตเอง<br><a href="#" onclick="return openEmbed()" style="color:var(--primary)">หรือเปิดแบบฝังในหน้านี้</a></small>
   </div>
  </section>
 
@@ -350,21 +350,31 @@ function manualRefresh(){
 }
 
 /* Vote modal: PlayServer page embedded in an iframe, popup window as fallback */
-function castVote(){
+// ค่าเริ่มต้น: เปิดเป็นหน้าต่าง popup (เสถียรกว่า ผ่านการตรวจของ Cloudflare ได้)
+function popVote(){
+  document.getElementById('voteModal').hidden=true;
+  const w=window.open(VOTE_URL,'psvote','width=480,height=640');
+  if(!w){                                              // popup ถูกบล็อก -> เปิดแท็บใหม่แทน
+    window.open(VOTE_URL,'_blank','noopener');
+    showNotice('เปิดหน้าโหวต PlayServer แล้ว โหวตเสร็จให้กลับมาหน้านี้');
+    return false;
+  }
+  showNotice('โหวตในหน้าต่างที่เปิดขึ้น เสร็จแล้วปิดหน้าต่างได้เลย');
+  const iv=setInterval(()=>{ if(w.closed){ clearInterval(iv); setTimeout(()=>fetchLive(true),1500); } },800);
+  return false;
+}
+function castVote(){ return popVote(); }
+
+// ตัวเลือกรอง: ฝังหน้าโหวตใน modal (อาจใช้ไม่ได้ถ้า PlayServer/Cloudflare บล็อก)
+function openEmbed(){
   const f=document.getElementById('voteFrame');
   if(!f.src||f.src==='about:blank') f.src=VOTE_URL;   // โหลดครั้งแรกตอนกดเท่านั้น
   document.getElementById('voteModal').hidden=false;
+  return false;
 }
 function closeVote(){
   document.getElementById('voteModal').hidden=true;
   setTimeout(()=>fetchLive(true),1500);               // ปิดแล้วดึงคะแนนล่าสุด
-}
-function popVote(){
-  const w=window.open(VOTE_URL,'psvote','width=480,height=640');
-  if(!w){ window.open(VOTE_URL,'_blank','noopener'); return false; }
-  document.getElementById('voteModal').hidden=true;
-  const iv=setInterval(()=>{ if(w.closed){ clearInterval(iv); setTimeout(()=>fetchLive(true),1500); } },800);
-  return false;
 }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!document.getElementById('voteModal').hidden) closeVote(); });
 document.getElementById('voteModal').addEventListener('click',e=>{ if(e.target.id==='voteModal') closeVote(); });
